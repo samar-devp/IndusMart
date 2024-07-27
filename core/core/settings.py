@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'authentication',
-    'product'
+    'product',
+    'utils'
 ]
 
 MIDDLEWARE = [
@@ -50,10 +51,29 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]   
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # Ensure this backend is included
+    'authentication.backends.PasswordlessAuthBackend',  # Make sure this path is correct
 ]
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # or your broker URL
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # or your backend URL
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'coding.samar@gmail.com'  # Replace with your email
+EMAIL_HOST_PASSWORD = 'ldui gkvo kvot jyge'  # Replace with your email password
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
 ROOT_URLCONF = 'core.urls'
-AUTH_USER_MODEL = 'authentication.Customer'
 
 
 TEMPLATES = [
