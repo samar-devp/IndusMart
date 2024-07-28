@@ -16,9 +16,7 @@ from .forms import *
 from .tasks import *
 
 def AuthPage(request):
-    print(request.user, "111111111111111")
     return render(request, 'auth/auth.html')
-
 
 @require_POST
 def request_otp(request):
@@ -26,23 +24,23 @@ def request_otp(request):
     if form.is_valid():
         email = form.cleaned_data['email']
         generate_and_send_otp.delay(email)  # Call the Celery task asynchronously
-        return JsonResponse({'success': True})
-    return JsonResponse({'success': False, 'errors': {'user_data': ['Invalid email']}})
+        return JsonResponse({'success': True, 'email': email})
+    return JsonResponse({'success': False, 'errors': form.errors.get_json_data()})
 
 
-@csrf_exempt  # Use this decorator if you handle CSRF tokens manually or have them in your AJAX setup
+@csrf_exempt 
 @require_POST
 def user_login(request):
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        email_arr = request.POST.getlist('email', 'null')
-        otp_arr = request.POST.getlist('otp', 'null')
-        email = email_arr[0] if email_arr else None
-        otp = otp_arr[0] if otp_arr else None
+    if request.method =='POST':
+        email = request.POST.get('email', '')
+        otp = request.POST.get('otp', '')
+        
+        # Validate email format
         email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-        if re.match(email_regex, email):
-            user = User.objects.filter(email=email).first()
-        else:
-            return JsonResponse({'success': False, 'errors': {'error': ['Invalid email']}})
+        if not re.match(email_regex, email):
+            return JsonResponse({'success': False, 'errors': {'error': ['Invalid email format']}})
+        
+        user = User.objects.filter(email=email).first()
         if user:
             otp_obj = OTP.objects.filter(email=email, otp=otp)
             if not otp_obj:
@@ -54,14 +52,11 @@ def user_login(request):
             else:
                 return JsonResponse({'success': False, 'errors': {'error': ['Authentication failed']}})
         else:
-            email_arr = request.POST.getlist('email', 'null')
-            email = email_arr[0] if email_arr else None
-            data = request.POST.copy()
-            data['email'] = email
-            form = UserForm(data)
+            # Handle user registration and creation
+            form = UserForm(request.POST)
             if form.is_valid():
                 user = form.save()
-                user = authenticate(request, email=user.email)  
+                user = authenticate(request, email=user.email)
                 if user is not None:
                     login(request, user, backend='authentication.backends.PasswordlessAuthBackend')
                     return JsonResponse({'success': True, 'redirect': '/product/home/'})
@@ -70,4 +65,4 @@ def user_login(request):
             else:
                 errors = form.errors.get_json_data()
                 return JsonResponse({'success': False, 'errors': errors})
-    return JsonResponse({'success': False, 'error': ['Invalid request.']})
+    return JsonResponse({'success': False, 'errors': {'error': ['Invalid request.']}})
